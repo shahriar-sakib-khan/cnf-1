@@ -1,0 +1,31 @@
+
+> cnf-nexus@3.0.0 build C:\__projects\MERN\CNF\CNF1
+> turbo run build "--filter" "web"
+
+• turbo 2.8.10
+• Packages in scope: web
+• Running build in 1 packages
+• Remote caching disabled
+@repo/shared:build: cache hit, replaying logs 94e98ff74ace3ae9
+@repo/shared:build: 
+@repo/shared:build: > @repo/shared@1.0.0 build C:\__projects\MERN\CNF\CNF1\packages\shared
+@repo/shared:build: > tsc
+@repo/shared:build: 
+web:build: cache miss, executing c094e77b6ba80a3f
+web:build: 
+web:build: > web@0.0.0 build C:\__projects\MERN\CNF\CNF1\apps\web
+web:build: > tsc -b && vite build
+web:build: 
+web:build: src/features/auth/pages/StaffLoginPage.tsx(3,10): error TS2724: '"@repo/shared"' has no exported member named 'StaffLoginSchema'. Did you mean 'LoginSchema'?
+web:build: src/features/auth/pages/StaffLoginPage.tsx(3,33): error TS2724: '"@repo/shared"' has no exported member named 'StaffLoginInput'. Did you mean 'LoginInput'?
+web:build:  ELIFECYCLE  Command failed with exit code 2.
+web:build: ERROR: command finished with error: command (C:\__projects\MERN\CNF\CNF1\apps\web) C:\Users\sakib\AppData\Local\pnpm\.tools\pnpm\9.0.0\bin\pnpm.CMD run build exited (2)
+web#build: command (C:\__projects\MERN\CNF\CNF1\apps\web) C:\Users\sakib\AppData\Local\pnpm\.tools\pnpm\9.0.0\bin\pnpm.CMD run build exited (2)
+
+ Tasks:    1 successful, 2 total
+Cached:    1 cached, 2 total
+  Time:    5.428s 
+Failed:    web#build
+
+ ERROR  run failed: command  exited (2)
+ ELIFECYCLE  Command failed with exit code 2.

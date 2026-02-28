@@ -1,0 +1,19 @@
+# System
+node_modules/
+dist/
+.env
+.turbo
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# App Specific
+apps/api/src/scripts/
+!apps/api/src/scripts/.gitignore
+!apps/api/src/scripts/index.ts
+
+# Large files
+*.log
+*.sqlite

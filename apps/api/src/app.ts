@@ -1,0 +1,72 @@
+import express, { Express, Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import authRoutes from './modules/auth/auth.routes';
+import adminRoutes from './modules/admin/admin.routes';
+import storeRoutes from './modules/store/store.routes';
+import clientRoutes from './modules/client/client.routes';
+import fileRoutes from './modules/file/file.routes';
+import financeRoutes from './modules/finance/finance.routes';
+
+
+dotenv.config();
+
+const app: Express = express();
+
+// Middleware
+app.use(express.json());
+app.use(cookieParser());
+app.use(cors({
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'http://localhost:5175'
+  ],
+  credentials: true,
+}));
+app.use(helmet());
+app.use(morgan('dev'));
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/store', storeRoutes);
+app.use('/api/clients', clientRoutes);
+app.use('/api/files', fileRoutes);
+app.use('/api/finance', financeRoutes);
+
+// Global Error Handler
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error(err.stack);
+  res.status(err.statusCode || 500).json({
+    success: false,
+    error: {
+      code: err.code || 'INTERNAL_ERROR',
+      message: err.message || 'An unexpected error occurred',
+      ...(process.env.NODE_ENV === 'development' && { details: err.stack }),
+    }
+  });
+});
+
+// Database Connection & Server Start
+const PORT = process.env.PORT || 4000;
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/cnfnexus';
+
+if (process.env.NODE_ENV !== 'test') {
+  mongoose.connect(MONGO_URI)
+
+    .then(() => {
+      console.log('Connected to MongoDB');
+      app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+      });
+    })
+    .catch((error) => {
+      console.error('MongoDB connection error:', error);
+    });
+}
+
+export default app;
