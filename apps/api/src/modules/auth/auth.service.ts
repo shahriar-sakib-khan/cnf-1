@@ -2,14 +2,14 @@ import bcrypt from 'bcryptjs';
 import { UserModel } from './user.model';
 import { StoreModel } from './store.model';
 import { signToken } from '../../common/utils/jwt.utils';
-import { CreateOwnerInput, CreateStaffInput } from '@repo/shared';
+import { CreateOwnerInput, CreateStaffInput, UpdateProfileInput, UpdateStaffInput } from '@repo/shared';
 
 // ── Unified login (email or phone) ──────────────────────
 export const login = async (identifier: string, password: string) => {
   const trimmedId = identifier.trim();
   const userRecord = await UserModel.findOne({
     $or: [{ email: trimmedId.toLowerCase() }, { phone: trimmedId }],
-  }).select('+password').lean();
+  }).select('+password').lean() as any;
 
   if (!userRecord || !userRecord.isActive) throw new Error('Invalid credentials');
 
@@ -19,8 +19,8 @@ export const login = async (identifier: string, password: string) => {
   const token = signToken({
     id: userRecord._id.toString(),
     type: userRecord.userType,
-    role: userRecord.role,
-    storeId: userRecord.storeId?.toString(),
+    role: userRecord.role as any,
+    tenantId: userRecord.tenantId?.toString(),
     tokenVersion: userRecord.tokenVersion,
   });
 
@@ -32,11 +32,11 @@ export const login = async (identifier: string, password: string) => {
 // ── Admin creates a new Owner + their Store ──────────────
 export const createOwner = async (data: CreateOwnerInput, adminId: string) => {
   if (data.email) {
-    const exists = await UserModel.findOne({ email: data.email.toLowerCase() }).lean();
+    const exists = await UserModel.findOne({ email: data.email.toLowerCase() }).lean() as any;
     if (exists) throw new Error('Email already in use');
   }
   if (data.phone) {
-    const exists = await UserModel.findOne({ phone: data.phone }).lean();
+    const exists = await UserModel.findOne({ phone: data.phone }).lean() as any;
     if (exists) throw new Error('Phone already in use');
   }
 
@@ -70,19 +70,19 @@ export const createOwner = async (data: CreateOwnerInput, adminId: string) => {
     throw err;
   }
 
-  // 3. Link storeId back
-  await UserModel.findByIdAndUpdate(user._id, { storeId: store._id });
+  // 3. Link tenantId back
+  await UserModel.findByIdAndUpdate(user._id, { tenantId: store._id });
 
-  const userObj = user.toJSON() as Record<string, unknown>;
+  const userObj = user.toJSON() as any;
   delete userObj.password;
-  userObj.storeId = store._id;
+  userObj.tenantId = store._id;
   return userObj;
 };
 
 // ── Owner creates a staff member (or another owner) in their store ──
 export const createStaffMember = async (ownerId: string, data: CreateStaffInput) => {
-  const owner = await UserModel.findById(ownerId).select('+password').lean();
-  if (!owner || owner.role !== 'OWNER' || !owner.storeId) {
+  const owner = await UserModel.findById(ownerId).select('+password').lean() as any;
+  if (!owner || owner.role !== 'OWNER' || !owner.tenantId) {
     throw new Error('Only store owners can create new accounts');
   }
 
@@ -98,11 +98,11 @@ export const createStaffMember = async (ownerId: string, data: CreateStaffInput)
   }
 
   if (data.email) {
-    const c = await UserModel.findOne({ email: data.email.toLowerCase() }).lean();
+    const c = await UserModel.findOne({ email: data.email.toLowerCase() }).lean() as any;
     if (c) throw new Error('Email already in use');
   }
   if (data.phone) {
-    const c = await UserModel.findOne({ phone: data.phone }).lean();
+    const c = await UserModel.findOne({ phone: data.phone }).lean() as any;
     if (c) throw new Error('Phone already in use');
   }
 
@@ -114,7 +114,7 @@ export const createStaffMember = async (ownerId: string, data: CreateStaffInput)
     password: hashedPassword,
     userType: 'USER',
     role: data.role,
-    storeId: owner.storeId,
+    tenantId: owner.tenantId,
     createdBy: ownerId,
   });
 
@@ -126,14 +126,14 @@ export const createStaffMember = async (ownerId: string, data: CreateStaffInput)
 // ── List all user-type users (admin view) ────────────────
 export const listAllOwners = async () => {
   const owners = await UserModel.find({ userType: 'USER', role: 'OWNER' })
-    .populate('storeId')
-    .lean();
+    .populate('tenantId')
+    .lean() as any;
 
-  const results = await Promise.all(owners.map(async (owner) => {
+  const results = await Promise.all(owners.map(async (owner: any) => {
     const staff = await UserModel.find({
-      storeId: owner.storeId,
+      tenantId: owner.tenantId,
       _id: { $ne: owner._id }
-    }).select('-password').lean();
+    }).select('-password').lean() as any;
 
     return {
       ...owner,
@@ -145,18 +145,18 @@ export const listAllOwners = async () => {
 };
 
 // ── List all users in a store (including OWNERs) ──────────
-export const listStoreStaff = async (storeId: string) => {
-  return UserModel.find({ storeId })
+export const listStoreStaff = async (tenantId: string) => {
+  return UserModel.find({ tenantId })
     .select('-password')
-    .lean();
+    .lean() as any;
 };
 
 // ── Get current user ─────────────────────────────────────
-export const getMe = async (id: string) => UserModel.findById(id).lean();
+export const getMe = async (id: string) => UserModel.findById(id).lean() as any;
 
 // ── Change password (user self-service) ──────────────────
 export const changePassword = async (userId: string, currentPassword: string, newPassword: string) => {
-  const user = await UserModel.findById(userId).select('+password').lean();
+  const user = await UserModel.findById(userId).select('+password').lean() as any;
   if (!user) throw new Error('User not found');
   const match = await bcrypt.compare(currentPassword, user.password as string);
   if (!match) throw new Error('Current password is incorrect');
@@ -173,3 +173,61 @@ export const adminResetUserPassword = async (userId: string, newPassword: string
   });
 };
 
+// ── Update Profile (user self-service) ───────────────────
+export const updateProfile = async (userId: string, data: UpdateProfileInput) => {
+  if (data.email) {
+    const exists = await UserModel.findOne({ email: data.email.toLowerCase(), _id: { $ne: userId } }).lean() as any;
+    if (exists) throw new Error('Email already in use by another user');
+  }
+  if (data.phone) {
+    const exists = await UserModel.findOne({ phone: data.phone, _id: { $ne: userId } }).lean() as any;
+    if (exists) throw new Error('Phone already in use by another user');
+  }
+
+  const updateFields: any = {};
+  if (data.name !== undefined) updateFields.name = data.name;
+  if (data.email !== undefined) updateFields.email = data.email === '' ? null : data.email.toLowerCase();
+  if (data.phone !== undefined) updateFields.phone = data.phone === '' ? null : data.phone;
+
+  const user = await UserModel.findByIdAndUpdate(userId, updateFields, { new: true }).select('-password').lean() as any;
+  if (!user) throw new Error('User not found');
+  return user;
+};
+
+// ── Update Staff (Owner/Manager power) ──────────────────
+export const updateStaffMember = async (tenantId: string, userId: string, data: UpdateStaffInput) => {
+  const user = await UserModel.findOne({ _id: userId, tenantId }).lean() as any;
+  if (!user) throw new Error('Staff member not found in this store');
+
+  if (data.email) {
+    const exists = await UserModel.findOne({ email: data.email.toLowerCase(), _id: { $ne: userId } }).lean() as any;
+    if (exists) throw new Error('Email already in use');
+  }
+  if (data.phone) {
+    const exists = await UserModel.findOne({ phone: data.phone, _id: { $ne: userId } }).lean() as any;
+    if (exists) throw new Error('Phone already in use');
+  }
+
+  const updateFields: any = {};
+  if (data.name !== undefined) updateFields.name = data.name;
+  if (data.email !== undefined) updateFields.email = data.email === '' ? null : data.email.toLowerCase();
+  if (data.phone !== undefined) updateFields.phone = data.phone === '' ? null : data.phone;
+  if (data.role !== undefined) updateFields.role = data.role;
+  if (data.isActive !== undefined) updateFields.isActive = data.isActive;
+
+  const updated = await UserModel.findByIdAndUpdate(userId, updateFields, { new: true }).select('-password').lean() as any;
+  return updated;
+};
+
+// ── Tenant Owner Resets Staff Password ───────────────────
+export const tenantResetStaffPassword = async (tenantId: string, userId: string, newPassword: string) => {
+  const staff = await UserModel.findOne({ _id: userId, tenantId }).lean() as any;
+  if (!staff) throw new Error('Staff member not found in this store');
+  if (staff.role === 'OWNER') throw new Error('Cannot reset another owner\'s password via this route');
+
+  const hashed = await bcrypt.hash(newPassword, 10);
+  await UserModel.findByIdAndUpdate(userId, {
+    password: hashed,
+    $inc: { tokenVersion: 1 }
+  });
+};

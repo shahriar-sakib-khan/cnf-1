@@ -9,11 +9,17 @@
     "test": "vitest run",
     "db:seed:admins": "tsx src/scripts/seed-admins.ts",
     "db:seed:demo": "tsx src/scripts/seed-demo.ts",
-    "db:reset": "tsx src/scripts/reset-db.ts"
+    "db:seed:requests": "tsx src/scripts/seed-requests.ts",
+    "db:seed:expenses": "tsx src/scripts/seed-expenses.ts",
+    "db:drop": "tsx src/scripts/reset-db.ts",
+    "db:reset": "pnpm db:drop && pnpm db:seed:admins && pnpm db:seed:demo && pnpm db:seed:requests && pnpm db:seed:expenses"
   },
   "dependencies": {
     "@repo/shared": "workspace:*",
+    "adm-zip": "^0.5.16",
+    "axios": "^1.13.5",
     "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.9.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -26,6 +32,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.7",
     "@types/cors": "^2.8.17",

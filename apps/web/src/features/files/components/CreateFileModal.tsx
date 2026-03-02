@@ -32,6 +32,9 @@ export default function CreateFileModal({ open, onClose }: Props) {
       description: '',
       invoiceValue: 0,
       currency: 'USD',
+      exporterName: '',
+      copyDocsReceived: false,
+      originalDocsReceived: false,
     } as any,
   });
 
@@ -121,6 +124,41 @@ export default function CreateFileModal({ open, onClose }: Props) {
                   validationState={errors.blDate ? 'invalid' : undefined}
                   errorMessage={errors.blDate?.message} />
               )} />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label>Exporter Name</Label>
+              <Controller name="exporterName" control={control} render={({ field }) => (
+                <TextInput {...field} placeholder="e.g. ABC Global Inc." size="l" />
+              )} />
+            </div>
+
+            <div className="flex gap-6 mt-2">
+              <div className="flex items-center gap-2">
+                <Controller name="copyDocsReceived" control={control} render={({ field }) => (
+                  <input
+                    type="checkbox"
+                    id="copyDocs"
+                    checked={field.value}
+                    onChange={(e) => field.onChange(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                )} />
+                <label htmlFor="copyDocs" className="text-sm font-medium">Copy Docs RCVD</label>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Controller name="originalDocsReceived" control={control} render={({ field }) => (
+                  <input
+                    type="checkbox"
+                    id="originalDocs"
+                    checked={field.value}
+                    onChange={(e) => field.onChange(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                )} />
+                <label htmlFor="originalDocs" className="text-sm font-medium">Original Docs RCVD</label>
+              </div>
             </div>
 
             <div className="flex flex-col gap-1.5">

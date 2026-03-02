@@ -13,7 +13,7 @@ api.interceptors.response.use(
     const status = error?.response?.status;
     const code = error?.response?.data?.error?.code;
 
-    if (status === 401 || (status === 403 && code === 'NO_STORE_CONTEXT')) {
+    if (status === 401 || (status === 403 && (code === 'NO_STORE_CONTEXT' || code === 'NO_TENANT_CONTEXT'))) {
       // Clear local auth state and redirect to login
       import('../../features/auth/stores/useAuthStore').then(({ useAuthStore }) => {
         useAuthStore.getState().logout();

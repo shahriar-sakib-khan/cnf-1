@@ -25,7 +25,12 @@ export const createRequest = async (tenantId: string, staffId: string, data: Mon
  * Approve Request: Store -> Staff Wallet
  * Must be ACID compliant using Sessions and Transactions.
  */
-export const approveRequest = async (tenantId: string, requestId: string, managerId: string) => {
+export const approveRequest = async (
+  tenantId: string,
+  requestId: string,
+  managerId: string,
+  grantedAmount?: number
+) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -33,10 +38,13 @@ export const approveRequest = async (tenantId: string, requestId: string, manage
     const request = await MoneyRequestModel.findOne({ _id: requestId, tenantId, status: 'PENDING' }).session(session);
     if (!request) throw new Error('Request not found or already processed');
 
-    // 1. Update Staff Balance
+    // Use grantedAmount if provided; fall back to requested amount
+    const creditAmount = (grantedAmount !== undefined && grantedAmount >= 0) ? grantedAmount : request.amount;
+
+    // 1. Update Staff Balance with actual granted amount
     await UserModel.findByIdAndUpdate(
       request.staffId,
-      { $inc: { balanceTaka: request.amount } },
+      { $inc: { balanceTaka: creditAmount } },
       { session }
     );
 
@@ -44,16 +52,17 @@ export const approveRequest = async (tenantId: string, requestId: string, manage
     await LedgerEventModel.create([{
       tenantId,
       type: 'CREDIT',
-      amount: request.amount,
-      fromId: managerId, // Representing the store/manager context
+      amount: creditAmount,
+      fromId: managerId,
       toId: request.staffId,
       refId: request._id,
       refType: 'MoneyRequest',
-      description: `Approved request: ${request.purpose}`,
+      description: `Approved request: ${request.purpose}${creditAmount !== request.amount ? ` (requested: ${request.amount}, granted: ${creditAmount})` : ''}`,
     }], { session });
 
-    // 3. Update Request Status
+    // 3. Update Request Status with granted amount
     request.status = 'APPROVED';
+    request.grantedAmount = creditAmount;
     request.approvedBy = new mongoose.Types.ObjectId(managerId);
     request.approvedAt = new Date();
     await request.save({ session });
@@ -77,8 +86,8 @@ export const settleExpense = async (tenantId: string, staffId: string, data: Exp
 
   try {
     const staff = await UserModel.findOne({ _id: staffId, tenantId }).session(session);
-    if (!staff || staff.balanceTaka < data.amount) {
-      throw new Error('Insufficient wallet balance');
+    if (!staff) {
+      throw new Error('Staff not found');
     }
 
     // 1. Deduct from Staff Balance
@@ -133,24 +142,85 @@ export const rejectRequest = async (tenantId: string, requestId: string) => {
   );
 };
 
+export const archiveRequest = async (tenantId: string, requestId: string) => {
+  const request = await MoneyRequestModel.findOne({ _id: requestId, tenantId }).populate('fileId');
+  if (!request) throw new Error('Request not found');
+
+  if (request.status === 'PENDING') {
+    throw new Error('Cannot archive pending requests');
+  }
+
+  if (request.fileId) {
+    const file = request.fileId as any;
+    const CLEARED_STATUSES = ['DELIVERED', 'BILLED', 'ARCHIVED'];
+    if (!CLEARED_STATUSES.includes(file.status)) {
+      throw new Error('Cannot archive request before file is cleared');
+    }
+  }
+
+  request.isArchived = true;
+  await request.save();
+  return request;
+};
+
+export const unarchiveRequest = async (tenantId: string, requestId: string) => {
+  const request = await MoneyRequestModel.findOne({ _id: requestId, tenantId });
+  if (!request) {
+    throw new Error('Request not found');
+  }
+
+  request.isArchived = false;
+  await request.save();
+  return request;
+};
+
 // ── Queries & Analytics ──────────────────────────────────
 
 export const listStoreRequests = async (tenantId: string, filters: any = {}) => {
-  return MoneyRequestModel.find({ tenantId, ...filters })
-    .populate('staffId', 'name email phone')
+  // Default to isArchived: false unless explicitly filtering for it
+  const isArchived = filters.isArchived === 'true' || filters.isArchived === true;
+  const match: any = { tenantId, isArchived };
+  if (filters.status) match.status = filters.status;
+
+  return MoneyRequestModel.find(match)
+    .populate('staffId', 'name email phone balanceTaka role')
+    .populate('approvedBy', 'name role')
+    .populate({
+      path: 'fileId',
+      select: 'fileNoFull status clientId',
+      populate: { path: 'clientId', select: 'name' }
+    })
     .sort({ createdAt: -1 })
     .lean();
 };
 
 export const listStaffFinancials = async (tenantId: string, staffId: string) => {
+  const tId = new mongoose.Types.ObjectId(tenantId);
+  const sId = new mongoose.Types.ObjectId(staffId);
+
   const [requests, expenses, user] = await Promise.all([
-    MoneyRequestModel.find({ tenantId, staffId }).sort({ createdAt: -1 }).limit(50).lean(),
-    ExpenseModel.find({ tenantId, staffId }).sort({ createdAt: -1 }).limit(50).lean(),
-    UserModel.findById(staffId).select('balanceTaka').lean(),
+    MoneyRequestModel.find({ tenantId: tId, staffId: sId })
+      .populate('staffId', 'name email phone balanceTaka role')
+      .populate('approvedBy', 'name role')
+      .populate({
+        path: 'fileId',
+        select: 'fileNoFull status clientId',
+        populate: { path: 'clientId', select: 'name' }
+      })
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean(),
+    ExpenseModel.find({ tenantId: tId, staffId: sId })
+      .populate('fileId', 'fileNoFull')
+      .populate('category', 'name')
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean(),
+    UserModel.findById(sId).select('balanceTaka').lean(),
   ]);
 
   return {
-    balance: user?.balanceTaka || 0,
+    balance: (user as any)?.balanceTaka || 0,
     requests,
     expenses,
   };
@@ -158,7 +228,72 @@ export const listStaffFinancials = async (tenantId: string, staffId: string) => 
 
 export const listFileExpenses = async (tenantId: string, fileId: string) => {
   return ExpenseModel.find({ tenantId, fileId })
-    .populate('staffId', 'name')
+    .populate('staffId', 'name balanceTaka')
+    .populate('category', 'name')
     .sort({ createdAt: -1 })
     .lean();
+};
+
+export const listAllExpenses = async (tenantId: string) => {
+  return ExpenseModel.find({ tenantId })
+    .populate('staffId', 'name email role balanceTaka')
+    .populate('category', 'name')
+    .populate({
+      path: 'fileId',
+      select: 'fileNoFull clientId status',
+      populate: { path: 'clientId', select: 'name' }
+    })
+    .sort({ createdAt: -1 })
+    .lean();
+};
+
+// ── Dashboard Stats ──────────────────────────────────────
+
+import { FileModel } from '../file/file.model';
+
+export const getDashboardStats = async (tenantId: string) => {
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const ACTIVE_STATUSES = ['CREATED', 'IGM_RECEIVED', 'BE_FILED', 'UNDER_ASSESSMENT', 'ASSESSMENT_COMPLETE', 'DUTY_PAID'];
+  const CLEARED_STATUSES = ['DELIVERED', 'BILLED', 'ARCHIVED'];
+
+  const [
+    filesActive,
+    filesCleared,
+    filesTotal,
+    pendingRequests,
+    approvedThisMonth,
+  ] = await Promise.all([
+    FileModel.countDocuments({ tenantId, isDeleted: { $ne: true }, status: { $in: ACTIVE_STATUSES } }),
+    FileModel.countDocuments({ tenantId, isDeleted: { $ne: true }, status: { $in: CLEARED_STATUSES } }),
+    FileModel.countDocuments({ tenantId, isDeleted: { $ne: true } }),
+    MoneyRequestModel.countDocuments({ tenantId, status: 'PENDING' }),
+    MoneyRequestModel.aggregate([
+      {
+        $match: {
+          tenantId: new mongoose.Types.ObjectId(tenantId),
+          status: 'APPROVED',
+          approvedAt: { $gte: startOfMonth },
+        }
+      },
+      { $group: { _id: null, total: { $sum: '$grantedAmount' } } }
+    ]),
+  ]);
+
+  // Recent requests (last 10)
+  const recentRequests = await MoneyRequestModel.find({ tenantId })
+    .populate('staffId', 'name')
+    .sort({ status: -1, createdAt: -1 }) // PENDING comes before APPROVED alphabetically
+    .limit(10)
+    .lean();
+
+  return {
+    filesActive,
+    filesCleared,
+    filesTotal,
+    pendingRequests,
+    approvedThisMonthTaka: approvedThisMonth[0]?.total || 0,
+    recentRequests,
+  };
 };

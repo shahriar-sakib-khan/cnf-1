@@ -7,7 +7,7 @@ export interface IUser extends Document {
   password?: string;
   userType: 'ADMIN' | 'USER';
   role: 'OWNER' | 'MANAGER' | 'STAFF';
-  storeId?: Types.ObjectId;
+  tenantId?: Types.ObjectId;
   createdBy?: Types.ObjectId;
   isActive: boolean;
   tokenVersion: number;
@@ -30,7 +30,7 @@ const UserSchema = new Schema({
   password: { type: String, required: true, select: false },
   userType: { type: String, enum: ['ADMIN', 'USER'], default: 'USER' },
   role: { type: String, enum: ['OWNER', 'MANAGER', 'STAFF'], default: 'OWNER' },
-  storeId: { type: Schema.Types.ObjectId, ref: 'Store', index: true },
+  tenantId: { type: Schema.Types.ObjectId, ref: 'Store', index: true },
   isActive: { type: Boolean, default: true },
   tokenVersion: { type: Number, default: 0 },
   balanceTaka: { type: Number, default: 0 },
@@ -40,6 +40,6 @@ const UserSchema = new Schema({
 UserSchema.index({ email: 1 }, { unique: true, sparse: true });
 UserSchema.index({ phone: 1 }, { unique: true, sparse: true });
 // Efficient per-store staff listing
-UserSchema.index({ storeId: 1, role: 1 });
+UserSchema.index({ tenantId: 1, role: 1 });
 
-export const UserModel = mongoose.model<IUser>('User', UserSchema);
+export const UserModel = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);

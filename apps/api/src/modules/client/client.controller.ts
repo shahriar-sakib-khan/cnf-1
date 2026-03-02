@@ -10,7 +10,7 @@ const requireTenant = (req: Request, res: Response): string | null => {
   if (!req.tenantId) {
     res.status(403).json({
       success: false,
-      error: { code: 'NO_STORE_CONTEXT', message: 'Session expired or no store linked. Please log out and log back in.' }
+      error: { code: 'NO_TENANT_CONTEXT', message: 'Session expired or no store linked. Please log out and log back in.' }
     });
     return null;
   }
@@ -53,5 +53,19 @@ export const deleteClient = asyncHandler(async (req: Request, res: Response) => 
   const tenantId = requireTenant(req, res);
   if (!tenantId) return;
   const result = await clientService.deleteClient(tenantId, req.params.id);
+  res.status(200).json({ success: true, data: result });
+});
+
+export const getClientStats = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = requireTenant(req, res);
+  if (!tenantId) return;
+  const result = await clientService.getClientStats(tenantId);
+  res.status(200).json({ success: true, data: result });
+});
+
+export const getClientFiles = asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = requireTenant(req, res);
+  if (!tenantId) return;
+  const result = await clientService.getClientFiles(tenantId, req.params.id);
   res.status(200).json({ success: true, data: result });
 });

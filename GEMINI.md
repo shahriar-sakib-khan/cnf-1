@@ -63,6 +63,12 @@ You are building with the **"Anti-Gravity"** philosophy: *Code is liability. Use
 * **Documentation:** As the project grows, you MUST create/update Markdown files in `docs/` to record decisions.
 * **Update:** If you change a core workflow, update `architecture .md` and `plan.md` immediately.
 
+### ⚖️ Law VI: AI Consistency (The 300-Line Limit)
+* **Optimization:** To maximize AI context tracking and minimize token waste, rigid file limits are enforced.
+* **The Rule:** No file over 400 lines (Hard limit 500). Ideal length is 100-250 lines.
+* **Extraction:** Table rows with logic, interactive modals, and complex forms MUST be extracted into their own micro-components inside `features/{feature}/components`.
+* **Separation:** Pages (`features/{feature}/pages`) handle ONLY data fetching and layout container styling. Render logic happens in the imported components.
+
 ---
 
 ## 3. CODE ARCHITECTURE RULES

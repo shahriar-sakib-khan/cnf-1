@@ -7,7 +7,7 @@ export interface TokenPayload {
   id: string;
   type: 'ADMIN' | 'USER';
   role: 'OWNER' | 'MANAGER' | 'STAFF';
-  storeId?: string;
+  tenantId?: string;
   tokenVersion: number;
 }
 

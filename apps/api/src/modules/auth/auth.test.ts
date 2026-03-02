@@ -8,7 +8,7 @@ import { StoreModel } from './store.model';
 describe('Auth Module', () => {
   let adminToken: string;
   let ownerToken: string;
-  let storeId: string;
+  let tenantId: string;
   let staffToken: string;
 
   beforeAll(async () => {
@@ -75,7 +75,7 @@ describe('Auth Module', () => {
       const store = await StoreModel.findOne({ ownerId: res.body.data._id });
       expect(store).toBeDefined();
       expect(store?.name).toBe("Test Owner's Store");
-      storeId = store!._id.toString();
+      tenantId = store!._id.toString();
     });
 
     it('should reject duplicate email', async () => {
@@ -118,7 +118,7 @@ describe('Auth Module', () => {
         .send({ name: 'Test Manager', email: 'manager@test.com', password: 'staffpass123', role: 'MANAGER' });
       expect(res.status).toBe(201);
       expect(res.body.data.role).toBe('MANAGER');
-      expect(res.body.data.storeId.toString()).toBe(storeId);
+      expect(res.body.data.tenantId.toString()).toBe(tenantId);
     });
 
     it('should allow owner to create STAFF by phone only', async () => {
@@ -127,7 +127,7 @@ describe('Auth Module', () => {
         .set('Cookie', [`token=${ownerToken}`])
         .send({ name: 'Test Staff', phone: '0987654321', password: 'staffpass123', role: 'STAFF' });
       expect(res.status).toBe(201);
-      expect(res.body.data.storeId.toString()).toBe(storeId);
+      expect(res.body.data.tenantId.toString()).toBe(tenantId);
     });
 
     it('should allow staff to login by phone', async () => {
@@ -144,7 +144,7 @@ describe('Auth Module', () => {
         .post('/api/store/staff')
         .set('Cookie', [`token=${staffToken}`])
         .send({ name: 'Rogue', email: 'rogue@test.com', password: 'roguepass', role: 'STAFF' });
-      expect(res.status).toBe(500); // service throws "Only owners can create staff"
+      expect(res.status).toBe(403); // requireRole check
     });
   });
 
@@ -190,8 +190,8 @@ describe('Auth Module', () => {
       expect(res.status).toBe(200);
       const testOwner = res.body.data.find((o: any) => o.email === 'owner@test.com');
       expect(testOwner).toBeDefined();
-      expect(testOwner.storeId).toBeDefined();
-      expect(testOwner.storeId.name).toBe("Test Owner's Store");
+      expect(testOwner.tenantId).toBeDefined();
+      expect(testOwner.tenantId.name).toBe("Test Owner's Store");
       expect(testOwner.staff).toBeDefined();
       expect(testOwner.staff.length).toBeGreaterThan(0);
       expect(testOwner.staff[0].name).toBe('Test Manager');
@@ -216,6 +216,118 @@ describe('Auth Module', () => {
         password: 'newmanagerpass',
       });
       expect(loginRes.status).toBe(200);
+    });
+  });
+
+  // ── Tenant Staff Management ────────────────────────────
+  describe('Tenant Staff Management (PUT /store/staff/:id)', () => {
+    let staffId: string;
+    let managerId: string;
+    let managerToken: string;
+
+    beforeAll(async () => {
+      const staffUser = await UserModel.findOne({ phone: '0987654321' });
+      staffId = staffUser!._id.toString();
+
+      const managerUser = await UserModel.findOne({ email: 'manager@test.com' });
+      managerId = managerUser!._id.toString();
+
+      const res = await request(app).post('/api/auth/login').send({
+        identifier: 'manager@test.com',
+        password: 'newmanagerpass',
+      });
+      const cookies = (res.headers['set-cookie'] as unknown) as string[];
+      managerToken = cookies[0].split(';')[0].split('=')[1];
+    });
+
+    it('should allow OWNER to update staff details', async () => {
+      const res = await request(app)
+        .put(`/api/store/staff/${staffId}`)
+        .set('Cookie', [`token=${ownerToken}`])
+        .send({ name: 'Updated Staff Name' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.name).toBe('Updated Staff Name');
+    });
+
+    it('should allow MANAGER to update staff details', async () => {
+      const res = await request(app)
+        .put(`/api/store/staff/${staffId}`)
+        .set('Cookie', [`token=${managerToken}`])
+        .send({ phone: '11122233344' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.phone).toBe('11122233344');
+    });
+
+    it('should prevent STAFF from updating other staff', async () => {
+      const res = await request(app)
+        .put(`/api/store/staff/${managerId}`)
+        .set('Cookie', [`token=${staffToken}`])
+        .send({ name: 'Hack Name' });
+
+      expect(res.status).toBe(403); // requireRole check
+    });
+
+    it('should allow OWNER to reset staff password', async () => {
+      const res = await request(app)
+        .put(`/api/store/staff/${staffId}/password`)
+        .set('Cookie', [`token=${ownerToken}`])
+        .send({ newPassword: 'newstaffpass123' });
+
+      expect(res.status).toBe(200);
+
+      // Verify login works
+      const loginRes = await request(app).post('/api/auth/login').send({
+        identifier: '11122233344',
+        password: 'newstaffpass123',
+      });
+      expect(loginRes.status).toBe(200);
+    });
+
+    it('should prevent MANAGER from resetting staff password', async () => {
+      const res = await request(app)
+        .put(`/api/store/staff/${staffId}/password`)
+        .set('Cookie', [`token=${managerToken}`])
+        .send({ newPassword: 'managerhackpass' });
+
+      expect(res.status).toBe(403);
+    });
+
+    it('should prevent STAFF from resetting password', async () => {
+      // Re-login staff because previous test reset password (revoking old token)
+      const loginRes = await request(app).post('/api/auth/login').send({
+        identifier: '11122233344',
+        password: 'newstaffpass123',
+      });
+      const cookies = (loginRes.headers['set-cookie'] as unknown) as string[];
+      const freshStaffToken = cookies[0].split(';')[0].split('=')[1];
+
+      const res = await request(app)
+        .put(`/api/store/staff/${managerId}/password`)
+        .set('Cookie', [`token=${freshStaffToken}`])
+        .send({ newPassword: 'staffhackpass' });
+
+      expect(res.status).toBe(403);
+    });
+
+    it('should prevent OWNER from resetting another OWNER password via tenant route', async () => {
+      // Create another owner
+      const otherOwner = await UserModel.create({
+        name: 'Other Owner',
+        email: 'otherowner@test.com',
+        role: 'OWNER',
+        tenantId: new mongoose.Types.ObjectId(tenantId),
+        password: 'pass',
+        userType: 'USER'
+      });
+
+      const res = await request(app)
+        .put(`/api/store/staff/${otherOwner._id}/password`)
+        .set('Cookie', [`token=${ownerToken}`])
+        .send({ newPassword: 'hack' });
+
+      expect(res.status).toBe(500); // Service throws "Cannot reset another owner's password via this route"
     });
   });
 });

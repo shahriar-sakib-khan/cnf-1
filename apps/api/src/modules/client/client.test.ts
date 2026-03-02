@@ -23,15 +23,15 @@ describe('Client Module', () => {
     const p1 = await bcrypt.hash('pass1', 10);
     const u1 = await UserModel.create({ name: 'U1', email: 'u1@test.com', password: p1, userType: 'USER', role: 'OWNER' });
     const s1 = await StoreModel.create({ ownerId: u1._id, name: 'Store 1' });
-    await UserModel.updateOne({ _id: u1._id }, { storeId: s1._id });
-    user1Token = signToken({ id: u1._id.toString(), type: 'USER', role: 'OWNER', storeId: s1._id.toString(), tokenVersion: 0 });
+    await UserModel.updateOne({ _id: u1._id }, { tenantId: s1._id });
+    user1Token = signToken({ id: u1._id.toString(), type: 'USER', role: 'OWNER', tenantId: s1._id.toString(), tokenVersion: 0 });
 
     // Setup User 2 (OWNER) + Store 2
     const p2 = await bcrypt.hash('pass2', 10);
     const u2 = await UserModel.create({ name: 'U2', email: 'u2@test.com', password: p2, userType: 'USER', role: 'OWNER' });
     const s2 = await StoreModel.create({ ownerId: u2._id, name: 'Store 2' });
-    await UserModel.updateOne({ _id: u2._id }, { storeId: s2._id });
-    user2Token = signToken({ id: u2._id.toString(), type: 'USER', role: 'OWNER', storeId: s2._id.toString(), tokenVersion: 0 });
+    await UserModel.updateOne({ _id: u2._id }, { tenantId: s2._id });
+    user2Token = signToken({ id: u2._id.toString(), type: 'USER', role: 'OWNER', tenantId: s2._id.toString(), tokenVersion: 0 });
   });
 
   afterAll(async () => {

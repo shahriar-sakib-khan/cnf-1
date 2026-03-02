@@ -47,6 +47,31 @@ export const AdminResetPasswordSchema = z.object({
 });
 export type AdminResetPasswordInput = z.infer<typeof AdminResetPasswordSchema>;
 
+// ── Update Profile (user self-service) ────────────────
+export const UpdateProfileSchema = z.object({
+  name: z.string().trim().optional(),
+  email: z.string().trim().email('Invalid email').optional().or(z.literal('')),
+  phone: z.string().trim().min(11, 'Phone too short').optional().or(z.literal('')),
+}).refine((d) => d.email || d.phone, {
+  message: 'Either email or phone is required',
+  path: ['email'],
+});
+export type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>;
+
+
+// ── Update Staff (Owner/Manager power) ────────────────
+export const UpdateStaffSchema = z.object({
+  name: z.string().trim().optional(),
+  email: z.string().trim().email('Invalid email').optional().or(z.literal('')),
+  phone: z.string().trim().min(7, 'Phone too short').optional().or(z.literal('')),
+  role: z.enum(['OWNER', 'MANAGER', 'STAFF']).optional(),
+  isActive: z.boolean().optional(),
+}).refine((d) => d.email || d.phone || d.name || d.role !== undefined || d.isActive !== undefined, {
+  message: 'At least one field must be provided for update',
+  path: ['name'],
+});
+export type UpdateStaffInput = z.infer<typeof UpdateStaffSchema>;
+
 
 // Keep old names as aliases so existing code doesn't break
 export const CreateStaffByOwnerSchema = CreateStaffSchema;

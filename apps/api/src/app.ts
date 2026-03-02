@@ -11,9 +11,13 @@ import storeRoutes from './modules/store/store.routes';
 import clientRoutes from './modules/client/client.routes';
 import fileRoutes from './modules/file/file.routes';
 import financeRoutes from './modules/finance/finance.routes';
-
+import uploadRoutes from './modules/upload/upload.routes';
+import reportRoutes from './modules/report/report.routes';
+import { configureCloudinary } from './common/services/cloudinary.service';
 
 dotenv.config();
+console.log('[DEBUG] MONGODB_URI:', process.env.MONGODB_URI);
+configureCloudinary();
 
 const app: Express = express();
 
@@ -37,16 +41,32 @@ app.use('/api/store', storeRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/finance', financeRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Global Error Handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
-  res.status(err.statusCode || 500).json({
+
+  let statusCode = err.statusCode || 500;
+  let code = err.code || 'INTERNAL_ERROR';
+  let message = err.message || 'An unexpected error occurred';
+  let details = undefined;
+
+  // Handle Zod Validation Errors
+  if (err.name === 'ZodError') {
+    statusCode = 400;
+    code = 'VALIDATION_ERROR';
+    message = 'Validation failed';
+    details = err.errors;
+  }
+
+  res.status(statusCode).json({
     success: false,
     error: {
-      code: err.code || 'INTERNAL_ERROR',
-      message: err.message || 'An unexpected error occurred',
-      ...(process.env.NODE_ENV === 'development' && { details: err.stack }),
+      code,
+      message,
+      ...(process.env.NODE_ENV === 'development' || details ? { details : details || err.stack } : {}),
     }
   });
 });

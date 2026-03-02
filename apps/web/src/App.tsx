@@ -10,6 +10,9 @@ import StaffListPage from './features/staff/pages/StaffListPage';
 import FinancePage from './features/staff/pages/FinancePage';
 import AdminDashboard from './features/admin/pages/AdminDashboard';
 import ComingSoonPage from './features/dashboard/pages/ComingSoonPage';
+import ProfilePage from './features/settings/pages/ProfilePage';
+import ReportsPage from './features/reports/pages/ReportsPage';
+import InvoiceEditor from './features/reports/pages/InvoiceEditor';
 
 function App() {
   return (
@@ -31,9 +34,11 @@ function App() {
           <Route path="/staff" element={<StaffListPage />} />
           <Route path="/files" element={<FilesPage />} />
           <Route path="/files/:id" element={<FileDetailsPage />} />
-          <Route path="/expenses" element={<FinancePage />} />
-          <Route path="/reports" element={<ComingSoonPage />} />
+          <Route path="/finance" element={<FinancePage />} />
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/reports/invoice/:fileId/:type" element={<InvoiceEditor />} />
           <Route path="/settings" element={<ComingSoonPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
         </Route>
 
         {/* Catch all */}

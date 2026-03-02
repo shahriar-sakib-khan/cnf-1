@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../common/lib/api';
-import type { CreateStaffInput, AdminResetPasswordInput } from '@repo/shared';
+import type { CreateStaffInput, AdminResetPasswordInput, UpdateStaffInput } from '@repo/shared';
 
 export interface User {
   _id: string;
@@ -9,7 +9,7 @@ export interface User {
   phone?: string;
   role: 'OWNER' | 'MANAGER' | 'STAFF';
   isActive: boolean;
-  storeId?: string;
+  tenantId?: string;
   balanceTaka: number;
 }
 
@@ -36,10 +36,23 @@ export const useCreateStaff = () => {
   });
 };
 
+export const useUpdateStaff = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, data }: { userId: string; data: UpdateStaffInput }) => {
+      const res = await api.put(`/store/staff/${userId}`, data);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+    },
+  });
+};
+
 export const useResetStaffPassword = () => {
   return useMutation({
     mutationFn: async ({ userId, data }: { userId: string; data: AdminResetPasswordInput }) => {
-      const res = await api.put(`/admin/users/${userId}/password`, data);
+      const res = await api.put(`/store/staff/${userId}/password`, data);
       return res.data;
     },
   });

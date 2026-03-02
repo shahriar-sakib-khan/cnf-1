@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../../../common/lib/api';
 import type { CreateFileInput, UpdateFileInput } from '@repo/shared';
 
-export interface File {
+export interface OperationFile {
   _id: string;
   fileNoFull: string;
   clientId: {
@@ -15,10 +15,14 @@ export interface File {
   currency: string;
   description: string;
   status: string;
+  totalExpenses: number;
+  exporterName?: string;
+  copyDocsReceived?: boolean;
+  originalDocsReceived?: boolean;
   createdAt: string;
 }
 
-export const useFiles = (filters: { page?: number; limit?: number; status?: string; search?: string } = {}) => {
+export const useFiles = (filters: { page?: number; limit?: number; status?: string; search?: string; clientId?: string } = {}) => {
   return useQuery({
     queryKey: ['files', filters],
     queryFn: async () => {
@@ -46,6 +50,18 @@ export const useUpdateFile = () => {
   return useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateFileInput }) => {
       const res = await api.put(`/files/${id}`, data);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['files'] });
+    },
+  });
+};
+export const useDeleteFile = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.delete(`/files/${id}`);
       return res.data;
     },
     onSuccess: () => {

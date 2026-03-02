@@ -18,7 +18,7 @@ export const adminGuard = async (req: Request, res: Response, next: NextFunction
 
     const user = await UserModel.findById(payload.id)
       .select('tokenVersion isActive userType')
-      .lean();
+      .lean() as any;
 
     if (!user || !user.isActive) {
       res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'User not found or inactive' } });

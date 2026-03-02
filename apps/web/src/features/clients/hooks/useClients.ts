@@ -9,6 +9,8 @@ export interface Client {
   email?: string;
   address?: string;
   type: ClientType;
+  fileCount?: number;
+  totalExpenseAllFiles?: number;
   createdAt: string;
 }
 
@@ -52,5 +54,27 @@ export const useDeleteClient = () => {
       return data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['clients'] }),
+  });
+};
+
+export const useClientStats = () => {
+  return useQuery({
+    queryKey: ['clients', 'stats'],
+    queryFn: async () => {
+      const { data } = await api.get('/clients/stats');
+      return data.data;
+    },
+  });
+};
+
+export const useClientFiles = (clientId: string | null) => {
+  return useQuery({
+    queryKey: ['clients', clientId, 'files'],
+    queryFn: async () => {
+      if (!clientId) return null;
+      const { data } = await api.get(`/clients/${clientId}/files`);
+      return data.data;
+    },
+    enabled: !!clientId,
   });
 };

@@ -5,7 +5,9 @@ import {
   CreateOwnerSchema,
   CreateStaffSchema,
   ChangePasswordSchema,
-  AdminResetPasswordSchema
+  AdminResetPasswordSchema,
+  UpdateProfileSchema,
+  UpdateStaffSchema
 } from '@repo/shared';
 
 const asyncHandler = (fn: Function) => (req: Request, res: Response, next: any) =>
@@ -36,6 +38,7 @@ export const logout = asyncHandler(async (_req: Request, res: Response) => {
 export const getMe = asyncHandler(async (req: Request, res: Response) => {
   const user = await authService.getMe(req.user!.id);
   if (!user) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } });
+  console.log('[getMe] returning user:', user.email, 'tenantId:', user.tenantId);
   res.status(200).json({ success: true, data: user });
 });
 
@@ -45,6 +48,13 @@ export const changePassword = asyncHandler(async (req: Request, res: Response) =
   await authService.changePassword(req.user!.id, currentPassword, newPassword);
   res.clearCookie('token'); // force re-login after password change
   res.status(200).json({ success: true, data: { message: 'Password changed. Please log in again.' } });
+});
+
+// PUT /api/auth/profile
+export const updateProfile = asyncHandler(async (req: Request, res: Response) => {
+  const data = UpdateProfileSchema.parse(req.body);
+  const result = await authService.updateProfile(req.user!.id, data);
+  res.status(200).json({ success: true, data: result });
 });
 
 // ── Admin endpoints ──────────────────────────────────────
@@ -87,8 +97,29 @@ export const createStaff = asyncHandler(async (req: Request, res: Response) => {
 // GET /api/store/staff
 export const listStaff = asyncHandler(async (req: Request, res: Response) => {
   if (!req.tenantId) {
-    return res.status(403).json({ success: false, error: { code: 'NO_STORE_CONTEXT', message: 'No store context' } });
+    return res.status(403).json({ success: false, error: { code: 'NO_TENANT_CONTEXT', message: 'No store context' } });
   }
   const result = await authService.listStoreStaff(req.tenantId);
   res.status(200).json({ success: true, data: result });
+});
+
+// PUT /api/store/staff/:userId
+export const updateStaff = asyncHandler(async (req: Request, res: Response) => {
+  const { userId } = req.params;
+  const data = UpdateStaffSchema.parse(req.body);
+  const result = await authService.updateStaffMember(req.tenantId!, userId, data);
+  res.status(200).json({ success: true, data: result });
+});
+
+// PUT /api/store/staff/:userId/password
+export const tenantResetPassword = asyncHandler(async (req: Request, res: Response) => {
+  const { userId } = req.params;
+  const { newPassword } = AdminResetPasswordSchema.parse(req.body);
+
+  await authService.tenantResetStaffPassword(req.tenantId!, userId, newPassword);
+
+  res.status(200).json({
+    success: true,
+    data: { message: 'Password reset successfully' }
+  });
 });

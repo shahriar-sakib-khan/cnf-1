@@ -12,4 +12,4 @@ const StoreSchema = new Schema({
   name: { type: String, required: true, trim: true },
 }, { timestamps: true });
 
-export const StoreModel = mongoose.model<IStore>('Store', StoreSchema);
+export const StoreModel = mongoose.models.Store || mongoose.model<IStore>('Store', StoreSchema);

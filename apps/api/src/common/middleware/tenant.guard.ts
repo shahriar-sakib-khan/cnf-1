@@ -25,8 +25,8 @@ export const TenantGuard = async (req: Request, res: Response, next: NextFunctio
 
     // 3. Look up user in the unified UserModel (only for isActive + tokenVersion)
     const userRecord = await UserModel.findById(payload.id)
-      .select('tokenVersion isActive storeId')
-      .lean();
+      .select('tokenVersion isActive tenantId')
+      .lean() as any;
 
     if (!userRecord || !userRecord.isActive) {
       return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'User not found or inactive' } });
@@ -39,11 +39,12 @@ export const TenantGuard = async (req: Request, res: Response, next: NextFunctio
     }
 
     // 5. Attach user payload and tenantId to request
-    // Prefer storeId from DB (most current), then fall back to JWT payload
+    // Prefer tenantId from DB (most current), then fall back to JWT payload
     req.user = payload;
-    const storeId = userRecord.storeId?.toString() ?? payload.storeId;
-    if (storeId) {
-      req.tenantId = storeId;
+    const tenantId = userRecord.tenantId?.toString() ?? payload.tenantId;
+
+    if (tenantId) {
+      req.tenantId = tenantId;
     }
 
     next();
@@ -51,3 +52,20 @@ export const TenantGuard = async (req: Request, res: Response, next: NextFunctio
     return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' } });
   }
 };
+
+// ── Role Guard Factory ────────────────────────────────────
+// Usage: requireRole('OWNER', 'MANAGER')
+export const requireRole = (...roles: Array<'OWNER' | 'MANAGER' | 'STAFF'>) =>
+  (req: Request, res: Response, next: NextFunction) => {
+    const userRole = req.user?.role;
+    if (!userRole || !roles.includes(userRole)) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'FORBIDDEN',
+          message: `This action requires one of the following roles: ${roles.join(', ')}`
+        }
+      });
+    }
+    next();
+  };

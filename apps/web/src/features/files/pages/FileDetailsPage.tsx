@@ -2,21 +2,36 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Button, Text, TabProvider, TabList, Tab, Card, Label, Icon, Spin, Breadcrumbs
+  Button, Text, Card, Label, Icon, Spin, Breadcrumbs
 } from '@gravity-ui/uikit';
-import { ArrowLeft, Magnet, Archive, Check } from '@gravity-ui/icons';
-import axios from 'axios';
+import { ArrowLeft, LayoutSideContent, ChevronRight } from '@gravity-ui/icons';
+import api from '../../../common/lib/api';
+import { useAuthStore } from '../../auth/stores/useAuthStore';
 
-// Move to a separate file later if needed
+// Sub-components
+import { InlineEditableField } from '../components/InlineEditableField';
+import { FileOverviewTab } from '../components/FileOverviewTab';
+import { FileFinancialsTab } from '../components/FileFinancialsTab';
+import { FileLogisticsTab } from '../components/FileLogisticsTab';
+import { FileHistoryTab } from '../components/FileHistoryTab';
+import { FileEditModal } from '../components/FileEditModal';
+import { FileStageModal } from '../components/FileStageModal';
+import FileDocumentsTab from '../components/FileDocumentsTab';
+import { AssessmentTracker } from '../components/AssessmentTracker';
+
 const fetchFile = async (id: string) => {
-  const res = await axios.get(`${import.meta.env.VITE_API_URL}/files/${id}`, { withCredentials: true });
+  const res = await api.get(`/files/${id}`);
   return res.data;
 };
 
 export default function FileDetailsPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState('overview');
+  const [showEdit, setShowEdit] = useState(false);
+  const [showStage, setShowStage] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true);
 
   const { data: fileRes, isLoading, isError } = useQuery({
     queryKey: ['file', id],
@@ -26,170 +41,215 @@ export default function FileDetailsPage() {
 
   const file = fileRes?.data;
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Spin size="xl" />
-      </div>
-    );
-  }
+  if (isLoading) return <div className="flex justify-center items-center h-screen"><Spin size="xl" /></div>;
+  if (isError || !file) return <div className="p-8 text-center text-red-500">Error loading file details.</div>;
 
-  if (isError || !file) {
-    return (
-      <div className="p-8 text-center">
-        <Text variant="body-2" color="danger">Failed to load file details.</Text>
-        <Button className="mt-4" onClick={() => navigate('/files')}>Back to Files</Button>
-      </div>
-    );
-  }
+  const isManager = user?.userType === 'ADMIN' || user?.role === 'OWNER' || user?.role === 'MANAGER';
+
+  const tabs = [
+    {id: 'overview', label: 'Overview'},
+    {id: 'assessment', label: 'Assessment'},
+    {id: 'logistics', label: 'Logistics'},
+    {id: 'financials', label: 'Financials'},
+    {id: 'documents', label: 'Documents'},
+    {id: 'history', label: 'Audit Log'},
+  ];
 
   return (
-    <div className="flex flex-col gap-6 p-8 max-w-[1400px] mx-auto w-full animate-in fade-in duration-300">
-      {/* Breadcrumbs & Simple Header */}
-      <div className="flex items-center gap-4">
-        <Button view="flat" size="l" onClick={() => navigate('/files')}>
-          <Icon data={ArrowLeft} size={18} />
-        </Button>
-        <Breadcrumbs>
-          <Breadcrumbs.Item onClick={() => navigate('/files')}>Files</Breadcrumbs.Item>
-          <Breadcrumbs.Item>{file.fileNoFull}</Breadcrumbs.Item>
-        </Breadcrumbs>
-      </div>
-
-      <div className="flex justify-between items-start">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-3">
-            <Text variant="display-2" className="font-bold">{file.fileNoFull}</Text>
-            <Label theme="info" size="m">{file.status.replace('_', ' ')}</Label>
+    <div className="flex flex-col gap-6 p-8 max-w-[1600px] mx-auto w-full animate-in fade-in duration-300 min-h-screen">
+      {/* Header & Navigation */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex flex-col gap-3">
+          <Breadcrumbs>
+             <Breadcrumbs.Item onClick={() => navigate('/files')}>Files</Breadcrumbs.Item>
+             <Breadcrumbs.Item>{file.fileNoFull}</Breadcrumbs.Item>
+          </Breadcrumbs>
+          <div className="flex items-center gap-4">
+             <Button view="flat" size="l" onClick={() => navigate('/files')}>
+               <Icon data={ArrowLeft} size={20} />
+             </Button>
+             <div className="flex flex-col">
+                <Text variant="display-2" className="font-extrabold tracking-tighter uppercase italic">{file.fileNoFull}</Text>
+                <div className="flex items-center gap-2">
+                   <Label theme="info" size="m">{file.status.replace(/_/g, ' ')}</Label>
+                   <Text color="secondary" className="opacity-50 text-[10px] uppercase font-bold tracking-widest leading-none">
+                     Mission ID: {file._id}
+                   </Text>
+                </div>
+             </div>
           </div>
-          <Text variant="body-2" color="secondary">{file.description || 'No description provided'}</Text>
-        </div>
-        <div className="flex gap-3">
-          <Button view="normal" size="l">Edit Details</Button>
-          <Button view="action" size="l">Process Stage</Button>
-        </div>
-      </div>
-
-      {/* Main Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Col: Main Content */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          <Card className="p-1">
-            <TabProvider value={activeTab} onUpdate={(val) => setActiveTab(val)}>
-              <TabList>
-                <Tab value="overview">Overview</Tab>
-                <Tab value="logistics">Logistics</Tab>
-                <Tab value="financials">Financials</Tab>
-                <Tab value="documents">Documents</Tab>
-                <Tab value="history">History</Tab>
-              </TabList>
-            </TabProvider>
-          </Card>
-
-          <Card className="p-8 min-h-[400px]">
-             {activeTab === 'overview' && (
-               <div className="flex flex-col gap-8">
-                 <div className="grid grid-cols-2 gap-8">
-                    <div className="flex flex-col gap-2">
-                       <Text variant="subheader-2" className="text-indigo-400 border-b pb-2">Client Details</Text>
-                       <div className="flex items-center gap-3 mt-2">
-                          <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center">
-                             <Icon data={Magnet} className="text-indigo-400" />
-                          </div>
-                          <div>
-                             <Text variant="body-2" className="font-bold block">{file.clientId?.name}</Text>
-                             <Text variant="caption-2" color="secondary">{file.clientId?.email}</Text>
-                          </div>
-                       </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                       <Text variant="subheader-2" className="text-indigo-400 border-b pb-2">Shipment Info</Text>
-                       <div className="grid grid-cols-2 gap-4 mt-2">
-                          <div>
-                             <Text variant="caption-1" color="secondary">B/L Number</Text>
-                             <Text variant="body-2" className="font-mono mt-0.5">{file.blNo}</Text>
-                          </div>
-                          <div>
-                             <Text variant="caption-1" color="secondary">B/L Date</Text>
-                             <Text variant="body-2" className="mt-0.5">
-                                {new Date(file.blDate).toLocaleDateString()}
-                             </Text>
-                          </div>
-                       </div>
-                    </div>
-                 </div>
-
-                 <div className="flex flex-col gap-4">
-                    <Text variant="subheader-2" className="text-indigo-400 border-b pb-2">Current Processing Status</Text>
-                    <div className="flex items-center justify-between p-4 bg-[var(--g-color-base-generic-hover)] rounded-xl border border-[var(--g-color-line-generic)]">
-                       <div className="flex items-center gap-4">
-                          <Icon data={Check} size={24} className="text-green-400" />
-                          <div>
-                             <Text variant="body-2" className="font-bold block">File Created</Text>
-                             <Text variant="caption-1" color="secondary">Initiated by {file.createdBy?.name || 'System'}</Text>
-                          </div>
-                       </div>
-                       <Button size="s" view="flat-info">View Log</Button>
-                    </div>
-                 </div>
-               </div>
-             )}
-
-             {activeTab === 'logistics' && (
-               <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
-                 <Icon data={Archive} size={48} className="text-[var(--g-color-text-secondary)] opacity-20" />
-                 <Text variant="subheader-2" color="secondary">Logistics details are not yet added.</Text>
-                 <Button view="action">Edit Ship Information</Button>
-               </div>
-             )}
-
-             {activeTab === 'financials' && (
-               <div className="flex items-center justify-center py-20 text-center">
-                 <Text variant="subheader-2" color="secondary">Financial assessment in progress.</Text>
-               </div>
-             )}
-
-             {/* Add more tab content as needed */}
-          </Card>
         </div>
 
-        {/* Right Col: Side Info */}
-        <div className="flex flex-col gap-6">
-           <Card className="p-6 flex flex-col gap-6">
-              <Text variant="header-2">Quick Summary</Text>
-
-              <div className="flex flex-col gap-4">
-                 <div className="flex justify-between items-center">
-                    <Text variant="body-2" color="secondary">Total Value</Text>
-                    <Text variant="subheader-2" className="font-bold">
-                       {file.invoiceValue.toLocaleString()} {file.currency}
-                    </Text>
-                 </div>
-                 <div className="flex justify-between items-center">
-                    <Text variant="body-2" color="secondary">HS Code</Text>
-                    <Text variant="body-2">{file.hsCode || '—'}</Text>
-                 </div>
-                 <div className="flex justify-between items-center">
-                    <Text variant="body-2" color="secondary">Created On</Text>
-                    <Text variant="body-2">
-                       {new Date(file.createdAt).toLocaleDateString()}
-                    </Text>
-                 </div>
-              </div>
-
-              <div className="flex flex-col gap-2 mt-2">
-                 <Label theme="success" className="w-full justify-center py-1">ACID Verified</Label>
-              </div>
-           </Card>
-
-           <Card className="p-6">
-              <Text variant="header-1" className="mb-4">Internal Notes</Text>
-              <div className="p-4 bg-[var(--g-color-base-info-lightest)] rounded-lg text-sm italic text-[var(--g-color-text-info)]">
-                 No internal notes for this file.
-              </div>
-           </Card>
+        <div className="flex items-center gap-3 bg-slate-900/40 p-2 rounded-2xl border border-white/5">
+           <Button view="flat-secondary" size="l" onClick={() => setShowSidebar(!showSidebar)}>
+             <Icon data={LayoutSideContent} size={18} />
+           </Button>
+           <Button view="flat-secondary" size="l" onClick={() => setShowEdit(true)}>Edit Details</Button>
+           <Button view="action" size="l" onClick={() => setShowStage(true)}>Process Stage</Button>
         </div>
       </div>
+
+      {/* Navigation Tabs */}
+      <div className="flex items-center gap-2 mb-2 border-b border-white/5">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-6 py-4 text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 relative ${
+              activeTab === tab.id ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            {tab.label}
+            {activeTab === tab.id && (
+              <div className="absolute bottom-[-1px] left-0 right-0 h-0.5 bg-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.5)]" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Main Layout Grid */}
+      <div className={`grid grid-cols-1 ${showSidebar ? 'lg:grid-cols-4' : 'lg:grid-cols-1'} gap-8`}>
+        {/* Main Content Area */}
+        <div className={showSidebar ? 'lg:col-span-3 space-y-8' : 'space-y-8'}>
+          {activeTab === 'overview' && (
+            <FileOverviewTab 
+              file={file} 
+              onViewHistory={() => setActiveTab('history')}
+              onEdit={() => setShowEdit(true)}
+            />
+          )}
+          {activeTab === 'assessment' && (
+            <AssessmentTracker 
+              fileId={id!} 
+              assessment={file.assessment || { nodes: [] }} 
+            />
+          )}
+          {activeTab === 'logistics' && <FileLogisticsTab file={file} />}
+          {activeTab === 'financials' && (
+            <FileFinancialsTab 
+              fileId={file._id} 
+              isManager={isManager} 
+            />
+          )}
+          {activeTab === 'documents' && (
+            <FileDocumentsTab 
+              file={file} 
+              fileId={id!} 
+            />
+          )}
+          {activeTab === 'history' && (
+            <FileHistoryTab 
+              history={file.statusHistory || []} 
+            />
+          )}
+        </div>
+
+        {/* Right Sidebar */}
+        {showSidebar && (
+          <div className="flex flex-col gap-4 self-start sticky top-8">
+            <Card className="p-4 flex flex-col gap-4 bg-slate-900/40 rounded-xl border-white/5 shadow-xl">
+              <Text variant="header-2" className="uppercase tracking-widest opacity-50 text-[9px] font-black">Mission Meta</Text>
+              
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col">
+                  <Text variant="caption-1" color="secondary" className="opacity-40 text-[9px] mb-0.5 uppercase tracking-widest">Importer</Text>
+                  <Text variant="body-2" className="font-bold text-indigo-300 text-sm whitespace-nowrap overflow-hidden text-ellipsis">{file.clientId?.name}</Text>
+                </div>
+
+                <InlineEditableField 
+                  fileId={file._id} 
+                  fieldName="exporterName" 
+                  label="Exporter" 
+                  value={file.exporterName} 
+                  placeholder="Exporter Name"
+                />
+
+                <div className="grid grid-cols-2 gap-3 border-t border-white/5 pt-3">
+                  <InlineEditableField 
+                    fileId={file._id} 
+                    fieldName="blNo" 
+                    label="B/L Number" 
+                    value={file.blNo} 
+                    placeholder="BL-XXXX"
+                  />
+                  <InlineEditableField 
+                    fileId={file._id} 
+                    fieldName="blDate" 
+                    label="B/L Date" 
+                    value={file.blDate} 
+                    type="date"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 border-t border-white/5 pt-3">
+                  <InlineEditableField 
+                    fileId={file._id} 
+                    fieldName="hsCode" 
+                    label="HS Code" 
+                    value={file.hsCode} 
+                    placeholder="XXXX.XX.XX"
+                  />
+                  <InlineEditableField 
+                    fileId={file._id} 
+                    fieldName="countryOfOrigin" 
+                    label="Origin" 
+                    value={file.countryOfOrigin} 
+                    placeholder="Country"
+                  />
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-4 flex flex-col gap-4 bg-slate-900/40 rounded-xl border-white/5 shadow-xl">
+              <Text variant="header-2" className="uppercase tracking-widest opacity-50 text-[9px] font-black">Quick Summary</Text>
+              <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <InlineEditableField 
+                    fileId={file._id} 
+                    fieldName="invoiceValue" 
+                    label="Value" 
+                    value={file.invoiceValue} 
+                    type="number"
+                  />
+                  <InlineEditableField 
+                    fileId={file._id} 
+                    fieldName="currency" 
+                    label="Currency" 
+                    value={file.currency} 
+                    placeholder="USD"
+                  />
+                </div>
+
+                <div className="flex justify-between items-center cursor-pointer hover:bg-white/5 border-t border-white/5 pt-3 mt-1" onClick={() => setActiveTab('financials')}>
+                  <Text variant="caption-1" color="secondary" className="opacity-40 text-[9px] uppercase tracking-widest">Total Expense</Text>
+                  <Text variant="body-1" className="font-bold text-red-100/60 text-xs">
+                    {file.totalExpenses ? file.totalExpenses.toLocaleString() : '0'} BDT
+                  </Text>
+                </div>
+                
+                <div className="flex justify-between items-center border-t border-white/5 pt-3">
+                  <Text variant="caption-1" color="secondary" className="opacity-40 text-[9px] uppercase tracking-widest">Status</Text>
+                  <Label theme="info" size="s" className="font-black text-[9px] tracking-tighter uppercase">{file.status.replace(/_/g, ' ')}</Label>
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-4 bg-slate-900/40 rounded-xl border-white/5 shadow-xl group">
+              <div className="flex justify-between items-center mb-2">
+                <Text variant="header-2" className="uppercase tracking-widest opacity-50 text-[9px] font-black">Notes</Text>
+                <Icon data={ChevronRight} size={12} className="opacity-0 group-hover:opacity-20 transition-opacity" />
+              </div>
+              <div className="p-3 bg-indigo-500/5 rounded-lg text-[11px] italic text-indigo-200/40 border border-indigo-500/10 line-clamp-4">
+                {file.description || 'No notes archived.'}
+              </div>
+            </Card>
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      <FileEditModal open={showEdit} onClose={() => setShowEdit(false)} file={file} />
+      <FileStageModal open={showStage} onClose={() => setShowStage(false)} file={file} />
     </div>
   );
 }
