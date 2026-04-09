@@ -1,0 +1,39 @@
+services:
+  # API Backend
+  - type: web
+    name: cnf-api
+    runtime: node
+    plan: free # Change to a higher plan if needed
+    buildCommand: pnpm build --filter api
+    startCommand: pnpm start --filter api
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: MONGODB_URI
+        sync: false # Set this in the Render dashboard
+      - key: JWT_SECRET
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: PORT
+        value: 3000
+    healthCheckPath: /api/health # Ensure your API has this route
+
+  # Web Frontend
+  - type: web
+    name: cnf-web
+    runtime: static
+    plan: free
+    buildCommand: pnpm build --filter web
+    publishDir: apps/web/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://cnf-api.onrender.com/api # Replace with your dynamic URL if possible
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

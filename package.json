@@ -10,11 +10,14 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "db:seed:admins": "pnpm --filter api db:seed:admins",
     "db:seed:demo": "pnpm --filter api db:seed:demo",
-    "db:reset": "pnpm --filter api db:reset"
+    "db:reset": "pnpm --filter api db:reset",
+    "version": "changeset version",
+    "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
-    "turbo": "^2.4.0",
+    "@changesets/cli": "^2.30.0",
     "prettier": "^3.2.5",
+    "turbo": "^2.4.0",
     "typescript": "^5.4.5"
   },
   "engines": {
