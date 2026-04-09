@@ -1,5 +1,6 @@
 import { Text, Icon } from '@gravity-ui/uikit';
 import { Compass } from '@gravity-ui/icons';
+import { formatMoney } from '../../../common/utils/money';
 
 interface FileLogisticsTabProps {
   file: any;
@@ -23,7 +24,7 @@ export function FileLogisticsTab({ file }: FileLogisticsTabProps) {
     { label: 'Origin', value: file.countryOfOrigin },
     { label: 'Container', value: file.containerType },
     { label: 'Pkg Type', value: file.packageType },
-    { label: 'Assessment Val', value: file.assessmentValue ? `${file.assessmentValue.toLocaleString()} ${file.currency}` : null },
+    { label: 'Assessment Val', value: file.assessmentValue ? `${formatMoney(file.assessmentValue)} (${file.currency})` : null },
     { label: 'D/O Status', value: file.deliveryOrderStatus ? 'RECEIVED' : 'PENDING' },
     { label: 'Gate Pass No', value: file.gatePassNo },
     { label: 'Quantity', value: file.quantity },

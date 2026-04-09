@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { Modal, Button, Text, TextInput, Select } from '@gravity-ui/uikit';
 import { useSettleExpense, useMyFinancials, useExpenseCategories } from '../../staff/hooks/useFinance';
 import DocumentUpload from '../../../common/components/DocumentUpload';
+import { formatMoney } from '../../../common/utils/money';
 
 const FormSchema = z.object({
   amount: z.coerce.number().int().positive('Amount must be positive'),
@@ -55,7 +56,7 @@ export default function FileAddExpenseModal({
     setErrorMsg('');
 
     settleExpense(
-      { ...data, fileId, receiptUrl: data.receiptUrl || undefined },
+      { ...data, amount: data.amount * 100, fileId, receiptUrl: data.receiptUrl || undefined },
       {
         onSuccess: () => {
           reset();
@@ -85,7 +86,7 @@ export default function FileAddExpenseModal({
         <div className="bg-indigo-500/10 p-4 rounded-xl border border-indigo-500/20 flex justify-between items-center">
            <Text color="secondary" className="font-bold uppercase tracking-wider text-xs">Wallet Balance</Text>
            <Text variant="display-1" className={`font-bold ${currentBalance < 0 ? 'text-red-400' : 'text-indigo-400'}`}>
-              ৳ {currentBalance.toLocaleString()}
+              {formatMoney(currentBalance)}
            </Text>
         </div>
 

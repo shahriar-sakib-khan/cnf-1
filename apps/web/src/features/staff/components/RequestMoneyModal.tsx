@@ -18,7 +18,7 @@ export default function RequestMoneyModal({ open, onClose, fileOptions }: Reques
 
   const handleRequestSubmit = () => {
     requestMoney.mutate({
-      amount: parseInt(amount),
+      amount: parseInt(amount) * 100,
       purpose,
       ...(isGeneral ? {} : selectedFileId ? { fileId: selectedFileId } : {}),
     } as any, {

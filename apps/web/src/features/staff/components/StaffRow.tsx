@@ -2,6 +2,7 @@ import { Button, Text, Icon, Label, Tooltip } from '@gravity-ui/uikit';
 import { Person, ShieldCheck, At, Smartphone, CreditCard, Pencil, Key, TriangleExclamation } from '@gravity-ui/icons';
 import { useAuthStore } from '../../auth/stores/useAuthStore';
 import type { User } from '../hooks/useStaff';
+import { formatMoney } from '../../../common/utils/money';
 
 interface StaffRowProps {
   index: number;
@@ -115,7 +116,7 @@ export default function StaffRow({ index, member, isMe, hasPendingAlert, onViewL
             </div>
             <div className="flex items-center gap-1.5 justify-end">
                <Icon data={CreditCard} size={14} className="text-indigo-400" />
-               <Text variant="body-2" className="font-bold text-[14px]">৳ {(member.balanceTaka ?? 0).toLocaleString()}</Text>
+               <Text variant="body-2" className="font-bold text-[14px]">{formatMoney(member.balanceTaka ?? 0)}</Text>
             </div>
          </div>
        </div>

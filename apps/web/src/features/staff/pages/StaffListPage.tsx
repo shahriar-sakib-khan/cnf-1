@@ -11,6 +11,7 @@ import EditStaffModal from '../components/EditStaffModal';
 import StaffFinancialsModal from '../components/StaffFinancialsModal';
 import StaffResetPasswordModal from '../components/StaffResetPasswordModal';
 import StaffRow from '../components/StaffRow';
+import { formatMoney } from '../../../common/utils/money';
 
 export default function StaffListPage() {
   const { user } = useAuthStore();
@@ -105,7 +106,7 @@ export default function StaffListPage() {
                       </div>
                       <div className="flex items-center gap-1.5 justify-end">
                         <Icon data={CreditCard} size={12} className="text-indigo-400" />
-                        <Text variant="body-2" className="font-bold">৳ {(effectiveUser?.balanceTaka ?? 0).toLocaleString()}</Text>
+                        <Text variant="body-2" className="font-bold">{formatMoney(effectiveUser?.balanceTaka ?? 0)}</Text>
                       </div>
                     </div>
                     <Button view="flat-secondary" size="s">

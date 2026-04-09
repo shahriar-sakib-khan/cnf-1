@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Text, Button, Icon, Label, Spin } from '@gravity-ui/uikit';
 import { Magnet, Receipt, Link as LinkIcon } from '@gravity-ui/icons';
 import { useFileExpenses, useFileRequests } from '../../staff/hooks/useFinance';
+import { formatMoney } from '../../../common/utils/money';
 
 interface FileFinancialsTabProps {
   fileId: string;
@@ -41,11 +42,11 @@ export function FileFinancialsTab({ fileId }: FileFinancialsTabProps) {
       <div className="grid grid-cols-2 gap-4">
         <div className="rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-4">
           <Text color="secondary" className="block text-xs uppercase font-bold tracking-wider mb-1">Total Requested</Text>
-          <Text variant="display-2" className="font-bold text-indigo-300">৳ {totalRequested.toLocaleString()}</Text>
+          <Text variant="display-2" className="font-bold text-indigo-300">{formatMoney(totalRequested)}</Text>
         </div>
         <div className="rounded-xl bg-red-500/5 border border-red-500/20 p-4">
           <Text color="secondary" className="block text-xs uppercase font-bold tracking-wider mb-1">Total Expenses</Text>
-          <Text variant="display-2" className="font-bold text-red-300">৳ {totalExpenses.toLocaleString()}</Text>
+          <Text variant="display-2" className="font-bold text-red-300">{formatMoney(totalExpenses)}</Text>
         </div>
       </div>
 
@@ -91,7 +92,7 @@ export function FileFinancialsTab({ fileId }: FileFinancialsTabProps) {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <Text variant="body-2" className="font-bold">৳ {item.amount.toLocaleString()}</Text>
+                    <Text variant="body-2" className="font-bold">{formatMoney(item.amount)}</Text>
                     <Label theme={item.unifiedType === 'REQUISITION' ? 'info' : 'normal'} size="s">
                       {item.unifiedType}
                     </Label>

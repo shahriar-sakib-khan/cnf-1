@@ -4,6 +4,7 @@ import { Button, Text, Icon, Label, Tooltip } from '@gravity-ui/uikit';
 import { FileText, ArrowRight } from '@gravity-ui/icons';
 import { useFileTableStore } from '../stores/useFileTableStore';
 import { type OperationFile } from '../hooks/useFiles';
+import { formatMoney } from '../../../common/utils/money';
 import FileAddExpenseModal from './FileAddExpenseModal';
 
 const STATUS_THEMES: Record<string, any> = {
@@ -154,7 +155,7 @@ export default function FileRow({ index, file, onStatusClick, onClientClick, act
                     className="font-mono font-bold text-red-500 cursor-pointer hover:underline"
                     onClick={() => setIsExpenseModalOpen(true)}
                 >
-                    ৳ {file.totalExpenses.toLocaleString()}
+                    {formatMoney(file.totalExpenses)}
                 </Text>
              </Tooltip>
           </div>

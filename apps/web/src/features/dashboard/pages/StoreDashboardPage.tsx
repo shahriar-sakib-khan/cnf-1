@@ -4,6 +4,7 @@ import { useDashboardStats } from '../../staff/hooks/useFinance';
 import { useFiles } from '../../files/hooks/useFiles';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { formatMoney } from '../../../common/utils/money';
 
 export default function StoreDashboardPage() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
@@ -145,7 +146,7 @@ export default function StoreDashboardPage() {
                      </div>
                      <div className="flex justify-between items-center text-xs">
                        <Text color="secondary">{req.staffId?.name}</Text>
-                       <Text className="font-bold font-mono">৳ {req.amount.toLocaleString()}</Text>
+                       <Text className="font-bold font-mono">{formatMoney(req.amount)}</Text>
                      </div>
                      <Text color="secondary" className="text-xs">{new Date(req.createdAt).toLocaleDateString()}</Text>
                    </div>

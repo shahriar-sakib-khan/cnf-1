@@ -9,6 +9,7 @@ interface InlineEditableFieldProps {
   value: any;
   label: string;
   type?: 'text' | 'number' | 'date' | 'boolean' | 'select';
+  isMoney?: boolean;
   options?: { value: string; content: string }[];
   placeholder?: string;
   className?: string;
@@ -20,6 +21,7 @@ export function InlineEditableField({
   value,
   label,
   type = 'text',
+  isMoney = false,
   options,
   placeholder,
   className = '',
@@ -29,8 +31,12 @@ export function InlineEditableField({
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    setTempValue(value ?? '');
-  }, [value]);
+    let initialValue = value ?? '';
+    if (isMoney && typeof value === 'number') {
+      initialValue = value / 100;
+    }
+    setTempValue(initialValue);
+  }, [value, isMoney]);
 
   const mutation = useMutation({
     mutationFn: (newValue: any) => 
@@ -55,7 +61,10 @@ export function InlineEditableField({
     }
     
     let finalValue: any = valToSave;
-    if (type === 'number') finalValue = Number(valToSave);
+    if (type === 'number') {
+      finalValue = Number(valToSave);
+      if (isMoney) finalValue = Math.round(finalValue * 100);
+    }
     if (type === 'boolean') finalValue = Boolean(valToSave);
 
     mutation.mutate(finalValue);
@@ -75,6 +84,9 @@ export function InlineEditableField({
     }
     if (type === 'date' && value) {
       return new Date(value).toLocaleDateString();
+    }
+    if (isMoney && typeof value === 'number') {
+      return (value / 100).toLocaleString();
     }
     return String(value || '—');
   };

@@ -126,7 +126,7 @@ export default function ExpenseRow({
               </div>
            </div>
            {staffPart?.balanceTaka !== undefined && (
-              <Text className="text-[11px] font-bold text-emerald-500/80">Wallet: ৳ {staffPart.balanceTaka.toLocaleString()}</Text>
+              <Text className="text-[11px] font-bold text-emerald-500/80">Wallet: {formatMoney(staffPart.balanceTaka)}</Text>
            )}
         </div>
       </div>

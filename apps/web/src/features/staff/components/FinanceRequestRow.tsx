@@ -123,7 +123,7 @@ export default function FinanceRequestRow({
         </div>
         {r.staffId?.balanceTaka !== undefined && (
           <Text variant="body-1" color="secondary" className="block mt-0.5 font-bold text-[14px]">
-            Wallet: ৳ {r.staffId.balanceTaka.toLocaleString()}
+            Wallet: {formatMoney(r.staffId.balanceTaka)}
           </Text>
         )}
       </div>
@@ -195,7 +195,7 @@ export default function FinanceRequestRow({
         {/* Manager Pending Actions */}
         {isManager && isPending ? (
           <div className="flex flex-row gap-1 relative z-10">
-            <Button view="outlined-success" size="s" width="max" onClick={() => onApprove(r._id, Number(grantAmount))} loading={approving}>
+            <Button view="outlined-success" size="s" width="max" onClick={() => onApprove(r._id, Number(grantAmount) * 100)} loading={approving}>
               <Icon data={CircleCheck} size={14} className="mr-1" /> Accept
             </Button>
             <Button view="outlined-danger" size="s" width="max" onClick={() => onReject(r._id)} loading={rejecting} title="Reject">

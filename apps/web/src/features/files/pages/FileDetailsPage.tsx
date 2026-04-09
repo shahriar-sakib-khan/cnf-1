@@ -7,6 +7,7 @@ import {
 import { ArrowLeft, LayoutSideContent, ChevronRight } from '@gravity-ui/icons';
 import api from '../../../common/lib/api';
 import { useAuthStore } from '../../auth/stores/useAuthStore';
+import { formatMoney } from '../../../common/utils/money';
 
 // Sub-components
 import { InlineEditableField } from '../components/InlineEditableField';
@@ -210,6 +211,7 @@ export default function FileDetailsPage() {
                     label="Value" 
                     value={file.invoiceValue} 
                     type="number"
+                    isMoney={true}
                   />
                   <InlineEditableField 
                     fileId={file._id} 
@@ -223,7 +225,7 @@ export default function FileDetailsPage() {
                 <div className="flex justify-between items-center cursor-pointer hover:bg-white/5 border-t border-white/5 pt-3 mt-1" onClick={() => setActiveTab('financials')}>
                   <Text variant="caption-1" color="secondary" className="opacity-40 text-[9px] uppercase tracking-widest">Total Expense</Text>
                   <Text variant="body-1" className="font-bold text-red-100/60 text-xs">
-                    {file.totalExpenses ? file.totalExpenses.toLocaleString() : '0'} BDT
+                    {formatMoney(file.totalExpenses || 0)}
                   </Text>
                 </div>
                 

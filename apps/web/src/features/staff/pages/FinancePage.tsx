@@ -23,6 +23,7 @@ import GlobalAddExpenseModal from '../components/GlobalAddExpenseModal';
 import StaffFinancialsModal from '../components/StaffFinancialsModal';
 import FileFinancialsModal from '../../file/components/FileFinancialsModal';
 import ReceiptViewModal from '../components/ReceiptViewModal';
+import { formatMoney } from '../../../common/utils/money';
 
 export default function FinancePage() {
   const { user } = useAuthStore();
@@ -230,7 +231,7 @@ export default function FinancePage() {
           <Text className="block text-sm uppercase font-bold tracking-wider mb-2 text-indigo-100">My Wallet Balance</Text>
           <div className="flex items-center gap-3">
             <Icon data={CreditCard} size={24} className="text-white" />
-            <Text variant="display-1" className="font-bold text-white">৳ {(myData?.balance ?? 0).toLocaleString()}</Text>
+            <Text variant="display-1" className="font-bold text-white">{formatMoney(myData?.balance ?? 0)}</Text>
           </div>
         </Card>
 
@@ -244,7 +245,7 @@ export default function FinancePage() {
         <Card view="raised" className="p-6">
           <Text color="secondary" className="block text-sm uppercase font-bold tracking-wider mb-2">Total Expenses (Month)</Text>
           <Text variant="display-1" className="font-bold">
-            ৳ {(myData?.expenses ?? []).reduce((acc: number, e: any) => acc + e.amount, 0).toLocaleString()}
+            {formatMoney((myData?.expenses ?? []).reduce((acc: number, e: any) => acc + e.amount, 0))}
           </Text>
         </Card>
       </div>

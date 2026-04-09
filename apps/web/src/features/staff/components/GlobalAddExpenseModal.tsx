@@ -63,6 +63,7 @@ export default function GlobalAddExpenseModal({
 
     const payload = {
       ...data,
+      amount: data.amount * 100,
       fileId: isGeneral ? undefined : selectedFileId,
       receiptUrl: data.receiptUrl || undefined,
     };

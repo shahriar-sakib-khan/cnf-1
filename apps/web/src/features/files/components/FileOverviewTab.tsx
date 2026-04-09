@@ -107,7 +107,7 @@ export function FileOverviewTab({ file }: FileOverviewTabProps) {
         <InlineEditableField fileId={file._id} fieldName="beDate" label="B/E Date" value={file.beDate} type="date" />
         <InlineEditableField fileId={file._id} fieldName="cNumber" label="C Number" value={file.cNumber} placeholder="C-XXXX" />
         <InlineEditableField fileId={file._id} fieldName="cDate" label="C Date" value={file.cDate} type="date" />
-        <InlineEditableField fileId={file._id} fieldName="assessmentValue" label="Assess. Val" value={file.assessmentValue} type="number" />
+        <InlineEditableField fileId={file._id} fieldName="assessmentValue" label="Assess. Val" value={file.assessmentValue} type="number" isMoney={true} />
         <InlineEditableField 
           fileId={file._id} 
           fieldName="customsLane" 

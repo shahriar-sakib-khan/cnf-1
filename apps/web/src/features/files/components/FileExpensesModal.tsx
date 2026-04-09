@@ -1,6 +1,7 @@
 import { Modal, Text, Card, Spin, Icon, Button } from '@gravity-ui/uikit';
 import { Calculator, Clock } from '@gravity-ui/icons';
 import { useFileExpenses } from '../../staff/hooks/useFinance';
+import { formatMoney } from '../../../common/utils/money';
 
 interface FileExpensesModalProps {
   file: any;
@@ -31,7 +32,7 @@ export default function FileExpensesModal({ file, open, onClose }: FileExpensesM
           <div className="text-right">
              <Text color="secondary" variant="body-1" className="block uppercase text-[10px] font-bold tracking-wider opacity-60 mb-1">Total Expenses</Text>
              <Text variant="header-2" className="font-mono font-bold text-2xl text-red-500 bg-red-500/10 px-3 py-1 rounded-lg">
-               ৳ {totalAmount.toLocaleString()}
+               {formatMoney(totalAmount)}
              </Text>
           </div>
         </div>
@@ -70,7 +71,7 @@ export default function FileExpensesModal({ file, open, onClose }: FileExpensesM
                     </div>
                     <div className="text-right flex-shrink-0">
                       <Text variant="header-2" className="block font-mono font-bold text-lg text-red-400">
-                        - ৳ {item.amount.toLocaleString()}
+                        - {formatMoney(item.amount)}
                       </Text>
                     </div>
                   </div>

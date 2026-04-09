@@ -20,7 +20,7 @@ export function FileEditModal({ open, onClose, file }: FileEditModalProps) {
       clientId: file.clientId?._id || file.clientId,
       blNo: file.blNo,
       blDate: new Date(file.blDate).toISOString().split('T')[0],
-      invoiceValue: file.invoiceValue,
+      invoiceValue: (file.invoiceValue || 0) / 100,
       currency: file.currency,
       hsCode: file.hsCode,
       description: file.description,
@@ -37,7 +37,7 @@ export function FileEditModal({ open, onClose, file }: FileEditModalProps) {
       originalDocsReceived: file.originalDocsReceived || false,
       boeNumber: file.boeNumber || '',
       beDate: file.beDate ? new Date(file.beDate).toISOString().split('T')[0] : undefined,
-      assessmentValue: file.assessmentValue || 0,
+      assessmentValue: (file.assessmentValue || 0) / 100,
       customsLane: file.customsLane,
       cNumber: file.cNumber || '',
       cDate: file.cDate ? new Date(file.cDate).toISOString().split('T')[0] : undefined,
@@ -64,7 +64,14 @@ export function FileEditModal({ open, onClose, file }: FileEditModalProps) {
     <Modal open={open} onClose={onClose}>
         <div className="p-6 w-full max-w-2xl bg-[var(--g-color-base-background)] rounded-xl">
             <Text variant="header-2" className="mb-6 block">Edit File Details</Text>
-            <form onSubmit={handleSubmit((data) => mutation.mutate(data))} className="flex flex-col gap-4">
+            <form onSubmit={handleSubmit((data) => {
+                const preparedData = {
+                    ...data,
+                    invoiceValue: (data.invoiceValue || 0) * 100,
+                    assessmentValue: (data.assessmentValue || 0) * 100,
+                };
+                mutation.mutate(preparedData);
+            })} className="flex flex-col gap-4">
                 <div className="grid grid-cols-2 gap-4">
                     <TextInput
                         label="B/L Number"
