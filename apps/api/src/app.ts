@@ -16,8 +16,31 @@ import reportRoutes from './modules/report/report.routes';
 import { configureCloudinary } from './common/services/cloudinary.service';
 
 dotenv.config();
-console.log('[DEBUG] MONGODB_URI:', process.env.MONGODB_URI);
+
+// Mandatory Environment Variables Check
+const requiredEnv = ['MONGODB_URI', 'JWT_SECRET'];
+requiredEnv.forEach((env) => {
+  if (!process.env[env] && !process.env.MONGO_URI) {
+    console.error(`[CRITICAL] Missing environment variable: ${env}`);
+  }
+});
+
+console.log('[DEBUG] NODE_ENV:', process.env.NODE_ENV);
+console.log('[DEBUG] PORT:', process.env.PORT);
+console.log('[DEBUG] MONGODB_URI:', process.env.MONGODB_URI ? 'FOUND (HIDDEN)' : 'NOT FOUND');
+
 configureCloudinary();
+
+// Critical Error Listeners
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[CRITICAL] Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[CRITICAL] Uncaught Exception:', err);
+  process.exit(1);
+});
 
 const app: Express = express();
 
@@ -80,12 +103,22 @@ if (process.env.NODE_ENV !== 'test') {
 
     .then(() => {
       console.log('Connected to MongoDB');
-      app.listen(PORT, () => {
+      const server = app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
+      });
+      
+      server.on('error', (err: any) => {
+        if (err.code === 'EADDRINUSE') {
+          console.error(`[CRITICAL] Port ${PORT} is already in use.`);
+          process.exit(1);
+        } else {
+          console.error('[CRITICAL] Server error:', err);
+        }
       });
     })
     .catch((error) => {
-      console.error('MongoDB connection error:', error);
+      console.error('[CRITICAL] MongoDB connection error:', error);
+      process.exit(1); // Force exit so Render knows it failed
     });
 }
 
